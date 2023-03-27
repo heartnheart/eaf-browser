@@ -18,7 +18,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+from PyQt6 import QtCore
 from PyQt6.QtCore import QUrl, pyqtSlot
 from PyQt6.QtGui import QColor
 from PyQt6.QtWebEngineCore import QWebEngineUrlRequestInterceptor
@@ -34,6 +34,7 @@ import re
 import threading
 import time
 import urllib
+from pathlib import Path
 
 found_braveblock = True
 try:
@@ -42,10 +43,36 @@ except:
     found_braveblock = False
 
 class AppBuffer(BrowserBuffer):
+
+    @QtCore.pyqtSlot(result=str)
+    def get_cert_error_url(self):
+        return self._cert_error_url
+
+    @QtCore.pyqtSlot(bool)
+    def accept_certificate(self, value):
+        if value:
+            self.allowed_urls.append(self._cert_error_url)
+            self.buffer_widget.setUrl(QUrl(self._cert_error_url))
+        else:
+            self.buffer_widget.setUrl(QUrl("about:blank"))
+
+    def on_certificate_error(self, err):
+        if self.url in self.allowed_urls:
+            err.acceptCertificate()
+            return
+
+        # err.acceptCertificate()
+        self._cert_error_url = self.url
+        with open(Path(__file__).with_name('cert_error.html')) as f:
+            html = f.read()
+            self.buffer_widget.page().setHtml(html)
+
     def __init__(self, buffer_id, url, arguments):
         BrowserBuffer.__init__(self, buffer_id, url, arguments, False)
 
         self.config_dir = get_emacs_config_dir()
+        self.allowed_urls = []
+        self.buffer_widget.page().certificateError.connect(self.on_certificate_error)
 
         # When arguments is "temp_html_file", browser will load content of html file, then delete temp file.
         # Usually use for render html mail.

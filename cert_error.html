@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/qwebchannel@6.2.0/qwebchannel.min.js"></script>
+    <script>
+    </script>
+</head>
+<body>
+    Certificate Error when accessing <span id="cert_url"></span>
+
+    <button id="accept"> Accept </button>
+    <button id="reject"> Reject </button>
+    <script>
+    new QWebChannel(qt.webChannelTransport, channel => {
+        window.pyobject = channel.objects.pyobject;
+        window.pyobject.get_cert_error_url().then(res => {
+            console.error("res = ", res)
+            document.getElementById('cert_url').innerText = res
+        })
+    });
+    document.getElementById('accept').addEventListener('click', () => {
+        acceptCert(true)
+    })
+    document.getElementById('reject').addEventListener('click', () => {
+        acceptCert(false)
+    })
+    function acceptCert(accept) {
+        if(accept) {
+            window.pyobject.accept_certificate(accept)
+        }
+    }
+    </script>
+</body>
